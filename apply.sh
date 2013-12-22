@@ -12,27 +12,6 @@ on_exit() {
 }
 trap on_exit EXIT
 
-http_patch() {
-  PATCHNAME=$(basename $1)
-  curl -L -o $PATCHNAME -O -L $1
-  cat $PATCHNAME |patch -p1
-  rm $PATCHNAME
-}
-
-# Change directory verbose
-cdv() {
-  echo
-  echo "*****************************"
-  echo "Current Directory: $1"
-  echo "*****************************"
-  cd $BASEDIR/$1
-}
-
-# Change back to base directory
-cdb() {
-  cd $BASEDIR
-}
-
 # Sanity check
 if [ -d ../.repo ]; then
   cd ..
@@ -46,18 +25,26 @@ fi
 # Save Base Directory
 BASEDIR=$(pwd)
 
-# Abandon auto topic branch
-set -e
-. build/envsetup.sh
-
 ################ Apply Patches Below ####################
 
-repopick -b 53131 53595 53603 53604 54197 54198 54219 53468
+PATCHES=""
+if [[ $1 == "d2spr" ]]; then
+  PATCHES="$PATCHES 56077 56078" # Lte Tile
+  PATCHES="$PATCHES 55626 55399" # Lockscreen
+  PATCHES="$PATCHES 56100" # Statusbar Clock and Date actions
+  PATCHES="$PATCHES 56002 56001" # BT / audio
+  PATCHES="$PATCHES 55903" # sending apk 
+fi
 
-
-
-
-
-##### SUCCESS ####
-SUCCESS=true
-exit 0
+if [[ -n $PATCHES ]]; then
+  . build/envsetup.sh
+  repo abandon auto &>/dev/null
+  set -e
+  repopick -b $PATCHES
+  SUCCESS=true
+  exit 0
+else
+  echo "ERROR: No target specified."
+  SUCCESS=
+  exit 1
+fi
